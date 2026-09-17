@@ -1,0 +1,36 @@
+name: "Setup Python environment"
+description: >
+  Reusable composite action that sets up a Python interpreter, caches
+  pip, and installs project dependencies. Used by every job in the
+  main pipeline so the "install deps" logic lives in exactly one
+  place (DRY).
+
+inputs:
+  python-version:
+    description: "Python version to install (e.g. 3.11)"
+    required: true
+    default: "3.12"
+  requirements-file:
+    description: "Requirements file to install"
+    required: false
+    default: "requirements-dev.txt"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: "pip"
+        cache-dependency-path: |
+          requirements.txt
+          requirements-dev.txt
+
+    - name: Upgrade pip
+      shell: bash
+      run: python -m pip install --upgrade pip
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r ${{ inputs.requirements-file }}
