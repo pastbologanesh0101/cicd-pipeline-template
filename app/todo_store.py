@@ -72,12 +72,25 @@ class TodoStore:
     def update(
         self, todo_id: int, title: Optional[str] = None, completed: Optional[bool] = None
     ) -> Todo:
-        """Update fields on an existing todo and return it."""
+        """Update fields on an existing todo and return it.
+
+        Raises:
+            TodoNotFoundError: if no todo with that id exists.
+            TodoValidationError: if ``title`` fails validation, or
+                ``completed`` is provided but isn't an actual bool.
+                (A caller sending the string ``"false"`` instead of a
+                JSON boolean would otherwise silently mark the todo
+                complete, since ``bool("false")`` is ``True`` in
+                Python — this rejects that instead of doing the wrong
+                thing quietly.)
+        """
         todo = self.get(todo_id)
         if title is not None:
             todo.title = self._validate_title(title)
         if completed is not None:
-            todo.completed = bool(completed)
+            if not isinstance(completed, bool):
+                raise TodoValidationError("completed must be a boolean")
+            todo.completed = completed
         return todo
 
     def toggle(self, todo_id: int) -> Todo:

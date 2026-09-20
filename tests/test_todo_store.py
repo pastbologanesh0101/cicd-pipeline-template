@@ -64,6 +64,18 @@ def test_update_completed(store):
     assert updated.completed is True
 
 
+def test_update_rejects_non_bool_completed(store):
+    # "false" is a truthy string in Python — bool("false") is True —
+    # so without explicit type validation this would silently mark
+    # the todo complete instead of raising. A JSON API caller who
+    # sends a string instead of a JSON boolean should get a clear
+    # error, not the opposite of what they asked for.
+    todo = store.add("Buy milk")
+    with pytest.raises(TodoValidationError):
+        store.update(todo.id, completed="false")
+    assert store.get(todo.id).completed is False
+
+
 def test_update_missing_todo_raises(store):
     with pytest.raises(TodoNotFoundError):
         store.update(999, title="anything")
