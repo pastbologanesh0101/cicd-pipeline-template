@@ -200,12 +200,13 @@ docker build -t cicd-pipeline-template:local .
 
 **`python -m app.main` runs, but I can't reach the API from another
 container, VM, or device on my network.** `app/main.py`'s `__main__`
-block binds to `127.0.0.1` on purpose (safe default for local dev —
-bandit would also flag a hardcoded `0.0.0.0` bind as B104). If you
-need it reachable from elsewhere, run it the way the Dockerfile does
-instead: `flask --app app.main run --host=0.0.0.0 --port=8000`, or
-just use `docker run -p 8000:8000 ...`, which already binds all
-interfaces inside the container.
+block binds to `127.0.0.1` by default (safe default for local dev —
+bandit would also flag a hardcoded `0.0.0.0` bind as B104). Pass
+`--host 0.0.0.0` (and `--port` if you don't want 5000) to override it:
+`python -m app.main --host 0.0.0.0 --port 8000`. Equivalently, run it
+the way the Dockerfile does: `flask --app app.main run
+--host=0.0.0.0 --port=8000`, or just use `docker run -p 8000:8000
+...`, which already binds all interfaces inside the container.
 
 **`PUT /todos/<id>` with `{"completed": "false"}` returns 400
 ("completed must be a boolean").** This is intentional, not a bug —

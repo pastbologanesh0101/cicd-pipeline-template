@@ -107,7 +107,26 @@ def create_app() -> Flask:
 app = create_app()
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Run the calculator + todo API's Flask dev server."
+    )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="interface to bind to (default: 127.0.0.1; use 0.0.0.0 to "
+        "reach the server from another container, VM, or device)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5000,
+        help="port to listen on (default: 5000)",
+    )
+    args = parser.parse_args()
+
     # Bind to localhost by default for safe local development; a real
     # deployment would run this behind gunicorn/uwsgi in the container
     # (see Dockerfile) rather than via the Flask dev server.
-    app.run(host="127.0.0.1", port=5000)
+    app.run(host=args.host, port=args.port)
