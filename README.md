@@ -13,6 +13,17 @@ the pipeline structure around it: staged jobs with real dependencies,
 a reusable composite action, and a clear seam for where a real deploy
 stage would plug in.
 
+## Contents
+
+- [The app](#the-app)
+- [Pipeline architecture](#pipeline-architecture) — lint, test,
+  security scan, Docker lint, build, and how to add a real deploy stage
+- [Reusable composite action](#reusable-composite-action)
+- [Project layout](#project-layout)
+- [Running everything locally](#running-everything-locally)
+- [Troubleshooting / FAQ](#troubleshooting--faq)
+- [License](#license)
+
 ## The app
 
 `app/` contains:
