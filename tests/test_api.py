@@ -41,6 +41,18 @@ def test_calculate_unknown_operation(client):
     assert response.status_code == 400
 
 
+def test_calculate_rejects_non_numeric_values(client):
+    # a/b are present (so the "required" check passes) but aren't
+    # convertible to float — this exercises the separate
+    # TypeError/ValueError branch in do_calculate, distinct from the
+    # "missing fields" and "unknown operation" cases already covered.
+    response = client.post(
+        "/calculate", json={"operation": "add", "a": "not-a-number", "b": 2}
+    )
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "a and b must be numbers"}
+
+
 def test_is_prime_endpoint(client):
     response = client.get("/calculate/is-prime/17")
     assert response.status_code == 200
@@ -91,6 +103,21 @@ def test_update_todo(client):
     body = response.get_json()
     assert body["title"] == "Buy oat milk"
     assert body["completed"] is True
+
+
+def test_update_todo_rejects_invalid_title(client):
+    # PUT with a validation-failing title (blank after stripping) must
+    # surface the TodoValidationError as a 400, not a 500 or a silent
+    # no-op — this path wasn't exercised by test_update_todo, which
+    # only covers the success case.
+    created = client.post("/todos", json={"title": "Buy milk"}).get_json()
+    response = client.put(f"/todos/{created['id']}", json={"title": "   "})
+    assert response.status_code == 400
+    assert "error" in response.get_json()
+
+    # The todo itself must be unchanged.
+    unchanged = client.get(f"/todos/{created['id']}").get_json()
+    assert unchanged["title"] == "Buy milk"
 
 
 def test_toggle_todo(client):
