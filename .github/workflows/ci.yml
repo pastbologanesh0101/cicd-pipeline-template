@@ -78,10 +78,27 @@ jobs:
       - name: Run bandit (static security analysis of app code)
         run: bandit -r app -q
 
+  docker-lint:
+    name: Docker lint (hadolint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Lints the Dockerfile itself (best-practice rules: layer
+      # ordering, pinned base image tags, avoiding unnecessary
+      # root usage, etc.) — distinct from ruff/black, which only
+      # look at Python source, and from bandit, which only looks
+      # at application code, not the container definition.
+      - name: Run hadolint on Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
   build:
     name: Build Docker image
     runs-on: ubuntu-latest
-    needs: [lint, test, security-scan]
+    needs: [lint, test, security-scan, docker-lint]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

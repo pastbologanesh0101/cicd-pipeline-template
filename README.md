@@ -35,22 +35,22 @@ test client (`tests/test_calculator.py`, `tests/test_todo_store.py`,
 
 ## Pipeline architecture
 
-The workflow (`.github/workflows/ci.yml`) has four jobs, staged with
+The workflow (`.github/workflows/ci.yml`) has five jobs, staged with
 `needs:` so later, more expensive stages only run once earlier,
 cheaper ones pass:
 
 ```
-lint ──┐
-       ├──► build
-test ──┤   (needs: lint, test, security-scan)
-       │
-security-scan ──┘
+lint ──────────┐
+test ──────────┤
+security-scan ─┼──► build
+docker-lint ───┘   (needs: lint, test, security-scan, docker-lint)
 ```
 
-`lint`, `test`, and `security-scan` run in parallel (nothing depends
-on them running in a particular order relative to each other — only
-`build` waits on all three). This gets fast, independent feedback and
-still guarantees nothing gets built from code that fails a check.
+`lint`, `test`, `security-scan`, and `docker-lint` run in parallel
+(nothing depends on them running in a particular order relative to
+each other — only `build` waits on all four). This gets fast,
+independent feedback and still guarantees nothing gets built from
+code (or a Dockerfile) that fails a check.
 
 ### 1. Lint — `ruff check .` + `black --check .`
 
@@ -105,7 +105,24 @@ pip-audit -r requirements.txt
 bandit -r app -q
 ```
 
-### 4. Build — `docker build` (build-only)
+### 4. Docker lint — `hadolint`
+
+Lints the `Dockerfile` itself against best-practice rules (pinned
+base image tags, sane layer ordering, avoiding unnecessary root
+usage, etc.) via `hadolint/hadolint-action@v3.1.0`. This is a
+different kind of check than the others: `ruff`/`black` only look at
+Python source, and `bandit` only looks at application code — neither
+touches the container definition, so a bad `Dockerfile` could
+otherwise reach `build` unchecked.
+
+Run locally (requires [hadolint](https://github.com/hadolint/hadolint)
+installed, e.g. via `brew install hadolint` or its Docker image):
+
+```bash
+hadolint Dockerfile
+```
+
+### 5. Build — `docker build` (build-only)
 
 Builds the app's Docker image (`Dockerfile`) to prove it containerizes
 cleanly, using `docker/build-push-action` with `push: false`. It
@@ -144,10 +161,12 @@ build-only step:
 
 `.github/actions/setup-python-env/action.yml` is a composite action
 that installs a given Python version, enables pip caching, and
-installs `requirements-dev.txt`. All four jobs in `ci.yml` call it
+installs `requirements-dev.txt`. The three jobs that need a Python
+environment — `lint`, `test`, and `security-scan` — all call it
 (`uses: ./.github/actions/setup-python-env`) instead of repeating the
-same three steps four times — a small demonstration of DRY pipeline
-design that scales to real multi-job workflows.
+same three steps three times (`build` and `docker-lint` don't need
+it, since neither one runs Python) — a small demonstration of DRY
+pipeline design that scales to real multi-job workflows.
 
 ## Project layout
 
@@ -173,6 +192,7 @@ bandit -r app -q
 pip-audit -r requirements.txt
 pytest --cov=app --cov-report=term-missing
 
+hadolint Dockerfile   # requires hadolint installed separately, e.g. `brew install hadolint`
 docker build -t cicd-pipeline-template:local .
 ```
 
