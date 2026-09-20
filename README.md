@@ -176,6 +176,33 @@ pytest --cov=app --cov-report=term-missing
 docker build -t cicd-pipeline-template:local .
 ```
 
+## Troubleshooting / FAQ
+
+**`python -m app.main` runs, but I can't reach the API from another
+container, VM, or device on my network.** `app/main.py`'s `__main__`
+block binds to `127.0.0.1` on purpose (safe default for local dev —
+bandit would also flag a hardcoded `0.0.0.0` bind as B104). If you
+need it reachable from elsewhere, run it the way the Dockerfile does
+instead: `flask --app app.main run --host=0.0.0.0 --port=8000`, or
+just use `docker run -p 8000:8000 ...`, which already binds all
+interfaces inside the container.
+
+**`PUT /todos/<id>` with `{"completed": "false"}` returns 400
+("completed must be a boolean").** This is intentional, not a bug —
+`"false"` is a non-empty *string*, and `bool("false")` is `True` in
+Python, so accepting it would have silently marked the todo complete
+instead of incomplete. Send a real JSON boolean (`"completed": false`,
+no quotes) instead of the string.
+
+**`pip-audit -r requirements.txt` fails locally on a dependency that
+passed in CI yesterday.** `pip-audit` checks against a live
+vulnerability database, so a previously-clean pin can start failing
+without any change to this repo if a new CVE is published for it.
+Re-run it to see which package and advisory triggered it, then bump
+that pin in `requirements.txt` (this is exactly how the initial
+`Flask==3.0.3` pin was caught and bumped to `3.1.3`, per the security
+scan section above) — it's not a false positive to silence.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
